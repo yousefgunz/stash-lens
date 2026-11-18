@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import 'app_state.dart';
 import 'screens/setup_screen.dart';
 import 'screens/shell.dart';
+import 'state.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: Pal.surface,
+    systemNavigationBarColor: Color(0xFF090A0F),
+    systemNavigationBarIconBrightness: Brightness.light,
   ));
   runApp(ChangeNotifierProvider(create: (_) => AppState()..load(), child: const LensApp()));
 }
@@ -29,10 +31,10 @@ class LensApp extends StatelessWidget {
       theme: buildTheme(),
       home: Consumer<AppState>(
         builder: (_, s, __) {
-          if (!s.loaded) return const Scaffold(body: Center(child: LensMark()));
+          if (!s.loaded) return const Scaffold(body: Center(child: BrandMark(size: 56)));
           return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 400),
-            child: s.client == null ? const SetupScreen(key: ValueKey('setup')) : const Shell(key: ValueKey('shell')),
+            duration: const Duration(milliseconds: 380),
+            child: s.api == null ? const SetupScreen(key: ValueKey('setup')) : const Shell(key: ValueKey('shell')),
           );
         },
       ),

@@ -1,79 +1,58 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../app_state.dart';
-import '../theme.dart';
+import 'browse_screen.dart';
 import 'home_screen.dart';
+import 'more_screen.dart';
 import 'performers_screen.dart';
 import 'scenes_screen.dart';
 
 class Shell extends StatefulWidget {
   const Shell({super.key});
-
   @override
   State<Shell> createState() => _ShellState();
 }
 
 class _ShellState extends State<Shell> {
   int _tab = 0;
+  final _visited = <int>{0};
+
+  Widget _page(int i) {
+    switch (i) {
+      case 0:
+        return const HomeScreen();
+      case 1:
+        return const SafeArea(bottom: false, child: SceneBrowser(title: 'Scenes'));
+      case 2:
+        return const PerformersScreen();
+      case 3:
+        return const BrowseScreen();
+      default:
+        return const MoreScreen();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      const HomeScreen(),
-      const ScenesScreen(),
-      const PerformersScreen(),
-      _SettingsTab(),
-    ];
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        child: KeyedSubtree(key: ValueKey(_tab), child: pages[_tab]),
+      extendBody: true,
+      body: IndexedStack(
+        index: _tab,
+        children: List.generate(5, (i) => _visited.contains(i) ? _page(i) : const SizedBox.shrink()),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
+        onDestinationSelected: (i) => setState(() {
+          _tab = i;
+          _visited.add(i);
+        }),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.movie_outlined), selectedIcon: Icon(Icons.movie_rounded), label: 'Scenes'),
-          NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people_rounded), label: 'People'),
-          NavigationDestination(icon: Icon(Icons.tune_rounded), selectedIcon: Icon(Icons.tune_rounded), label: 'Server'),
+          NavigationDestination(icon: Icon(Icons.people_outline_rounded), selectedIcon: Icon(Icons.people_rounded), label: 'Performers'),
+          NavigationDestination(icon: Icon(Icons.grid_view_outlined), selectedIcon: Icon(Icons.grid_view_rounded), label: 'Browse'),
+          NavigationDestination(icon: Icon(Icons.more_horiz_rounded), selectedIcon: Icon(Icons.more_horiz_rounded), label: 'More'),
         ],
       ),
-    );
-  }
-}
-
-class _SettingsTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
-    return SafeArea(
-      child: ListView(padding: const EdgeInsets.all(24), children: [
-        Text('Server', style: display(40)),
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(color: Pal.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: Pal.line)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Connected to', style: TextStyle(color: Pal.dim, fontSize: 12)),
-            const SizedBox(height: 4),
-            Text(s.savedUrl, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-          ]),
-        ),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-          onPressed: () => context.read<AppState>().disconnect(),
-          icon: const Icon(Icons.swap_horiz_rounded),
-          label: const Text('Change server'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Pal.text,
-            side: const BorderSide(color: Pal.line),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          ),
-        ),
-      ]),
     );
   }
 }

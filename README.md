@@ -1,89 +1,76 @@
-# Stash Lens — Flutter app (Android + iOS)
+# Stash Lens — mobile app (Android + iOS)
 
-A native mobile client for your Stash server. It talks to Stash's GraphQL API and streams video
-straight from it, so nothing is wrapped in a WebView.
+A native Flutter client for **Stash Lens**. It talks to your Stash Lens server (the Flask app), never to
+Stash directly, so it shows exactly what the web app shows: same data, same hero rules, same filters.
 
-> This source was written without a Flutter SDK available, so it has not been compiled yet.
-> Expect to fix a typo or two on the first `flutter run`.
+> The Dart code passes the Dart parser but has not been compiled yet (no Flutter SDK was available
+> where it was written). Expect to fix a typo or two on the first `flutter run`, and send the error.
 
 ## What's in it
 
-- **Home** — Continue watching, Recently added, Highest rated, Something random
-- **Scenes** — search, 7 sort modes, infinite scroll
-- **People** — search, favourites filter, performer pages with their scenes
-- **Scene page** — hero frame, resume button, star rating (saved to Stash), cast, tags
-- **Player** — native `video_player`, double-tap ±10 s, speed menu, scrub bar, resume position
-  and play duration written back to Stash every 10 s
-- **Server** — change the server address / API key
+| Area | Features |
+|---|---|
+| **Home** | Auto-rotating hero (custom hero images first, then top-rated), Continue watching, Performer of the day, On this day, Birthdays today, New from your favourites, Recently added, Top 10 most played, Highest rated, Performers you watch most, 8K / 6K / 4K rails, Browse by studio, Fan favourites, Browse by tag, Still unwatched, Feature length, Shuffle, library stats band |
+| **Scenes** | Search, 10 sort modes with direction, filters for resolution, 12 library flags, minimum rating, organized, release year, infinite scroll |
+| **Performers** | Search by name or alias, sort (name, scenes, favourites, rating, age, height, shuffle), gender / country / minimum-scenes filters, favourites only |
+| **Performer page** | Portrait, age, country, stats (scenes, plays, favourites, footage, size, active years), details, aliases, tags, top studios, most common tags, scenes-by-year chart, frequent co-stars, all their scenes with the full scene browser |
+| **Browse** | Studios (search, sort, favourites) and Tags (heat-coloured, search, sort) |
+| **Search** | One box over scenes, performers, studios and tags |
+| **Scene page** | Hero frame, Play / Resume / Start over, file versions, cast with face-aware portraits, details, chapters (markers), tags, More like this, play and favourite history, file info (codec, bitrate, hashes, path), links |
+| **Player** | Native `video_player`, double-tap ±10 s, scrub bar with chapter ticks and thumbnail preview, speed, chapters list, version switch, rotate lock, Up next + autoplay, resume, progress sent back to Stash Lens |
+| **Library** | Statistics dashboard (resolutions, ratings, years, months, codecs, genders, top lists) |
+| **Library health** | Every health check with counts, tap to open the affected scenes, duplicate finder, missing-files check |
 
-## Build it
+Ratings, play counts and the database are **read-only** from the phone, like the web app's own views.
+Watching still saves your position locally and, if "Sync with Stash" is on in Stash Lens, back to Stash.
 
-```bash
-# 1. Generate the android/ and ios/ platform folders in this directory
+## 1. Make the Stash Lens server reachable from your phone
+
+On the computer running Stash Lens, open its **Settings → Network access**, switch on
+**Allow other computers on my network**, set an **access password**, and click **Apply**. It shows the
+address to use, for example `http://192.168.1.20:8765`. The first time, Windows asks whether Python may use
+the network: choose **Private networks**.
+
+## 2. Android
+
+```bat
+cd C:\path\to\stash_lens_app
 flutter create --platforms=android,ios --org com.stashlens --project-name stash_lens .
-
-# 2. Install packages
+python patch_android.py
 flutter pub get
-
-# 3. Run on a connected device / emulator
-flutter run
+flutter run                      :: phone plugged in with USB debugging, or an emulator
+flutter build apk --release      :: APK at build\app\outputs\flutter-apk\app-release.apk
 ```
 
-`flutter create .` leaves `lib/` and `pubspec.yaml` alone, so run it **before** anything else.
+`patch_android.py` adds the INTERNET permission and `usesCleartextTraffic` to the manifest (needed
+because Stash Lens is plain HTTP on your LAN).
 
-## Two required platform tweaks (Stash is plain HTTP on your LAN)
+If Gradle says *"this and base files have different roots"*, keep the project and Flutter's caches on the
+same drive: `setx PUB_CACHE A:\pub_cache` and `setx GRADLE_USER_HOME A:\gradle_home`, open a new
+terminal, `flutter clean`, then build again.
 
-**Android** — `android/app/src/main/AndroidManifest.xml`, add inside `<manifest>` and on `<application>`:
+## 3. iPhone without a Mac (free): GitHub Actions + Sideloadly
 
-```xml
-<uses-permission android:name="android.permission.INTERNET"/>
-<application
-    android:usesCleartextTraffic="true"
-    ... >
-```
+`.github/workflows/ios.yml` builds an unsigned `.ipa` on a GitHub macOS machine. It creates the `ios/`
+folder and adds the local-network permissions itself.
 
-**iOS** — `ios/Runner/Info.plist`, add inside the top-level `<dict>`:
+1. Put this folder in a **public** GitHub repository.
+2. **Actions → Build iOS (unsigned IPA) → Run workflow** (5–10 minutes).
+3. Download the **StashLens-ipa** artifact and unzip it to get `StashLens.ipa`.
+4. On Windows install **iTunes** and **iCloud** from Apple's website (not the Microsoft Store), then
+   **Sideloadly** from sideloadly.io.
+5. Connect the iPhone (USB-C iPhones need a USB-C to USB-A cable or adapter for an older PC), tap
+   **Trust**, and enable **Settings → Privacy & Security → Developer Mode**.
+6. Drag `StashLens.ipa` into Sideloadly, sign in with your Apple ID, **Start**.
+7. On the phone: **Settings → General → VPN & Device Management →** your Apple ID **→ Trust**.
+8. Open the app, allow the Local Network prompt, enter the address and password from step 1.
 
-```xml
-<key>NSAppTransportSecurity</key>
-<dict>
-    <key>NSAllowsLocalNetworking</key><true/>
-    <key>NSAllowsArbitraryLoads</key><true/>
-</dict>
-<key>NSLocalNetworkUsageDescription</key>
-<string>Stash Lens connects to your Stash server on the local network.</string>
-```
-
-## Connecting
-
-1. In Stash: **Settings → Security → API Key** (generate one if authentication is on).
-2. Open the app, enter `http://<your-pc-ip>:9999` and the key.
-3. The phone must reach that address — same Wi-Fi, or a VPN such as Tailscale/WireGuard.
+A free Apple ID signature lasts **7 days**. Run Sideloadly again with the same `.ipa` to renew it.
 
 ## Notes
 
-- Playback uses whatever Stash serves at `/scene/<id>/stream` (direct play). Formats a phone can't
-  decode natively (some HEVC/MKV combos) may fail; transcoded streaming can be added by switching to
-  the HLS stream URL.
-- Library data comes from Stash's own GraphQL API rather than the SQLite file, because a phone
-  can't read a database on your PC.
-
-## iPhone without a Mac (free): GitHub Actions + Sideloadly
-
-The workflow in `.github/workflows/ios.yml` builds an unsigned `.ipa` on a GitHub macOS machine.
-It creates the `ios/` folder and applies the Info.plist keys itself, so you don't have to.
-
-1. Create a **GitHub** repository and push this folder to it (GitHub Desktop is the easy way:
-   File → Add local repository → Publish). A private repo is fine, but macOS build minutes are
-   limited on the free plan; a public repo is free.
-2. In the repo open **Actions → Build iOS (unsigned IPA) → Run workflow**. It takes ~5–10 minutes.
-3. Open the finished run and download the **StashLens-ipa** artifact; unzip it to get `StashLens.ipa`.
-4. On Windows install **iTunes** and **iCloud** from Apple's website (not the Microsoft Store
-   versions), then install **Sideloadly** from sideloadly.io.
-5. Plug in the iPhone, tap **Trust**, and enable **Settings → Privacy & Security → Developer Mode**
-   (the phone restarts).
-6. In Sideloadly drag in `StashLens.ipa`, enter your Apple ID, click **Start**.
-7. On the phone: **Settings → General → VPN & Device Management →** your Apple ID **→ Trust**.
-8. Open the app and allow the Local Network prompt.
-
-A free Apple ID signature lasts **7 days**. Re-run Sideloadly with the same `.ipa` to renew it.
+- Playback streams the original file from `/api/stream/<id>`. A phone can only play what its hardware
+  decodes: HEVC is fine on nearly everything, AV1 needs a recent phone. If a file won't play, the player
+  says so, and the scene page's version picker can switch to another file when a scene has several.
+- Images and video send the access password as an HTTP Basic header, exactly like the browser does.
+- Watch progress for "Continue watching" is also stored on the phone, so it works even with sync off.
