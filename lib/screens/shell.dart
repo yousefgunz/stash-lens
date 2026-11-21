@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'browse_screen.dart';
+import 'feed_screen.dart';
 import 'home_screen.dart';
 import 'more_screen.dart';
 import 'performers_screen.dart';
@@ -21,11 +21,11 @@ class _ShellState extends State<Shell> {
       case 0:
         return const HomeScreen();
       case 1:
-        return const SafeArea(bottom: false, child: SceneBrowser(title: 'Scenes'));
+        return FeedScreen(active: _tab == 1);
       case 2:
-        return const PerformersScreen();
+        return const SafeArea(bottom: false, child: SceneBrowser(title: 'Scenes'));
       case 3:
-        return const BrowseScreen();
+        return const PerformersScreen();
       default:
         return const MoreScreen();
     }
@@ -47,9 +47,9 @@ class _ShellState extends State<Shell> {
         }),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.play_circle_outline_rounded), selectedIcon: Icon(Icons.play_circle_rounded), label: 'Feed'),
           NavigationDestination(icon: Icon(Icons.movie_outlined), selectedIcon: Icon(Icons.movie_rounded), label: 'Scenes'),
           NavigationDestination(icon: Icon(Icons.people_outline_rounded), selectedIcon: Icon(Icons.people_rounded), label: 'Performers'),
-          NavigationDestination(icon: Icon(Icons.grid_view_outlined), selectedIcon: Icon(Icons.grid_view_rounded), label: 'Browse'),
           NavigationDestination(icon: Icon(Icons.more_horiz_rounded), selectedIcon: Icon(Icons.more_horiz_rounded), label: 'More'),
         ],
       ),

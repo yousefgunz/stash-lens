@@ -7,8 +7,8 @@ import 'screens/scene_screen.dart';
 import 'screens/scenes_screen.dart';
 import 'screens/search_screen.dart';
 
-void openScene(BuildContext context, Scene s) {
-  Navigator.of(context).push(PageRouteBuilder(
+Future<void> openScene(BuildContext context, Scene s) {
+  return Navigator.of(context).push(PageRouteBuilder(
     transitionDuration: const Duration(milliseconds: 320),
     reverseTransitionDuration: const Duration(milliseconds: 240),
     pageBuilder: (_, __, ___) => SceneScreen(preview: s),
@@ -20,8 +20,8 @@ void openSceneId(BuildContext context, int id) {
   Navigator.of(context).push(MaterialPageRoute(builder: (_) => SceneScreen(sceneId: id)));
 }
 
-void openPerformer(BuildContext context, int id) {
-  Navigator.of(context).push(MaterialPageRoute(builder: (_) => PerformerScreen(id: id)));
+Future<void> openPerformer(BuildContext context, int id) {
+  return Navigator.of(context).push(MaterialPageRoute(builder: (_) => PerformerScreen(id: id)));
 }
 
 /// A standalone scene list with fixed filters (studio, tag, flag, year …) and a back button.

@@ -11,10 +11,11 @@ Stash directly, so it shows exactly what the web app shows: same data, same hero
 | Area | Features |
 |---|---|
 | **Home** | Auto-rotating hero (custom hero images first, then top-rated), Continue watching, Performer of the day, On this day, Birthdays today, New from your favourites, Recently added, Top 10 most played, Highest rated, Performers you watch most, 8K / 6K / 4K rails, Browse by studio, Fan favourites, Browse by tag, Still unwatched, Feature length, Shuffle, library stats band |
+| **Feed** | TikTok-style vertical feed: swipe up for the next scene, autoplays muted from a random point, filters (For you, Favourites, Unwatched, Top rated, New, 4K+), tap to pause, drag the bottom bar to seek, double-tap Fit/Fill, sound toggle, tap the avatar for the performer or Open for the scene page |
 | **Scenes** | Search, 10 sort modes with direction, filters for resolution, 12 library flags, minimum rating, organized, release year, infinite scroll |
 | **Performers** | Search by name or alias, sort (name, scenes, favourites, rating, age, height, shuffle), gender / country / minimum-scenes filters, favourites only |
 | **Performer page** | Portrait, age, country, stats (scenes, plays, favourites, footage, size, active years), details, aliases, tags, top studios, most common tags, scenes-by-year chart, frequent co-stars, all their scenes with the full scene browser |
-| **Browse** | Studios (search, sort, favourites) and Tags (heat-coloured, search, sort) |
+| **Browse** (More → Studios & tags) | Studios (search, sort, favourites) and Tags (heat-coloured, search, sort) |
 | **Search** | One box over scenes, performers, studios and tags |
 | **Scene page** | Hero frame, Play / Resume / Start over, file versions, cast with face-aware portraits, details, chapters (markers), tags, More like this, play and favourite history, file info (codec, bitrate, hashes, path), links |
 | **Player** | Native `video_player`, double-tap ±10 s, scrub bar with chapter ticks and thumbnail preview, speed, chapters list, version switch, rotate lock, Up next + autoplay, resume, progress sent back to Stash Lens |

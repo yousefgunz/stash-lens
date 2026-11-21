@@ -19,6 +19,7 @@ class AppState extends ChangeNotifier {
   String savedUrl = '';
   String savedPassword = '';
   bool autoplayNext = true;
+  bool feedMuted = true;
   Map<String, dynamic> status = {};
   Map<String, ProgEntry> _prog = {};
   SharedPreferences? _p;
@@ -28,6 +29,7 @@ class AppState extends ChangeNotifier {
     savedUrl = p.getString('url') ?? '';
     savedPassword = p.getString('pw') ?? '';
     autoplayNext = p.getBool('autoplay') ?? true;
+    feedMuted = p.getBool('feedMuted') ?? true;
     try {
       final raw = jsonDecode(p.getString('prog') ?? '{}') as Map<String, dynamic>;
       _prog = raw.map((k, v) {
@@ -63,6 +65,12 @@ class AppState extends ChangeNotifier {
 
   void disconnect() {
     api = null;
+    notifyListeners();
+  }
+
+  void setFeedMuted(bool v) {
+    feedMuted = v;
+    _p?.setBool('feedMuted', v);
     notifyListeners();
   }
 

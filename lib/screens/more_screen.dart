@@ -6,6 +6,7 @@ import '../nav.dart';
 import '../state.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'browse_screen.dart';
 import 'stats_screen.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -45,6 +46,7 @@ class MoreScreen extends StatelessWidget {
           IconButton(onPressed: () => openSearch(context), icon: const Icon(Icons.search_rounded)),
         ]),
         const SizedBox(height: 14),
+        tile(Icons.grid_view_rounded, 'Studios & tags', 'Browse the library by studio or tag', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const Scaffold(body: BrowseScreen())))),
         tile(Icons.insights_rounded, 'Library', 'Statistics, resolutions, years, top lists', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsScreen()))),
         tile(Icons.health_and_safety_rounded, 'Library health', 'Missing metadata, duplicates, files not found', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HealthScreen()))),
         tile(Icons.history_rounded, 'In progress', 'Scenes you started and haven\'t finished', () => openScenes(context, title: 'In progress', filters: {'flag': 'resumable'}, sort: 'last_played')),
