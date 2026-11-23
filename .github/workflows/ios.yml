@@ -36,17 +36,21 @@ jobs:
       - name: Build (no code signing)
         run: flutter build ios --release --no-codesign
 
-      # Sideloadly's signer (ldid) chokes on Mach-O files that carry a leftover or truncated signature
-      # (the player's libmpv frameworks do). Remove every signature; Sideloadly signs it again with your Apple ID.
-      - name: Strip old signatures
+      # Sideloadly's old ldid asserts ("end >= size - 0x10") on binaries made by the newest Xcode linker
+      # (loose bytes after the code signature). Re-sign every Mach-O file ad-hoc with a current ldid so the
+      # signature sits exactly at the end of each file. Sideloadly then replaces it with your Apple ID signature.
+      - name: Normalise Mach-O signatures
         run: |
+          brew install ldid
           APP=build/ios/iphoneos/Runner.app
+          find "$APP" -name _CodeSignature -type d -prune -exec rm -rf {} +
           find "$APP" -type f | while read -r f; do
             if file "$f" | grep -q "Mach-O"; then
               codesign --remove-signature "$f" 2>/dev/null || true
+              ldid -S "$f" || echo "ldid skipped $f"
+              echo "signed: $f"
             fi
           done
-          find "$APP" -name _CodeSignature -type d -prune -exec rm -rf {} +
 
       - name: Package IPA
         run: |
