@@ -1,0 +1,61 @@
+name: Build iOS (unsigned IPA)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Generates the ios/ platform folder if the repo doesn't contain one.
+      - name: Create iOS platform files
+        run: flutter create --platforms=ios --org com.stashlens --project-name stash_lens .
+
+      # Stash is plain HTTP on your LAN, so iOS needs these keys.
+      - name: Patch Info.plist
+        run: |
+          P=ios/Runner/Info.plist
+          PB=/usr/libexec/PlistBuddy
+          $PB -c "Add :NSAppTransportSecurity dict" "$P" || true
+          $PB -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$P" || true
+          $PB -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$P" || true
+          $PB -c "Add :NSFaceIDUsageDescription string Unlock Stash Lens with Face ID." "$P" || true
+          $PB -c "Add :NSLocalNetworkUsageDescription string Stash Lens connects to your Stash server on the local network." "$P" || true
+
+      - run: flutter pub get
+
+      - name: Build (no code signing)
+        run: flutter build ios --release --no-codesign
+
+      # Sideloadly's signer (ldid) chokes on Mach-O files that carry a leftover or truncated signature
+      # (the player's libmpv frameworks do). Remove every signature; Sideloadly signs it again with your Apple ID.
+      - name: Strip old signatures
+        run: |
+          APP=build/ios/iphoneos/Runner.app
+          find "$APP" -type f | while read -r f; do
+            if file "$f" | grep -q "Mach-O"; then
+              codesign --remove-signature "$f" 2>/dev/null || true
+            fi
+          done
+          find "$APP" -name _CodeSignature -type d -prune -exec rm -rf {} +
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry StashLens.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StashLens-ipa
+          path: StashLens.ipa
+          retention-days: 14
