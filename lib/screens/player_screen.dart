@@ -4,13 +4,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player/video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../api.dart';
 import '../models.dart';
 import '../state.dart';
 import '../theme.dart';
+import '../video.dart';
 import '../widgets.dart';
 
 /// Native player for Stash Lens streams (/api/stream/<id>): chapters, scrub thumbnails, resume, up-next, progress sync.
@@ -24,12 +24,12 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends State<PlayerScreen> {
+class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver {
   late final AppState _app;
   late final LensApi _api;
 
   Scene? _detail;
-  VideoPlayerController? _c;
+  LensVideo? _c;
   String? _error;
   bool _showUi = true;
   bool _landscapeLock = false;
@@ -64,6 +64,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _app = context.read<AppState>();
     _api = _app.api!;
     _fileId = widget.fileId;
@@ -89,14 +90,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
       });
     });
 
-    final c = VideoPlayerController.networkUrl(Uri.parse(_api.stream(widget.scene.id, fileId: _fileId)), httpHeaders: _api.headers);
+    final c = LensVideo(_api.stream(widget.scene.id, fileId: _fileId), headers: _api.headers);
     try {
       await c.initialize();
     } catch (e) {
       c.dispose();
       if (mounted) {
-        setState(() => _error = 'This video could not be played.\n\nThe file may use a codec your phone cannot decode (for example HEVC/AV1 on older devices), '
-            'or Stash Lens cannot reach the file.\n\n$e');
+        setState(() => _error = 'This video could not be played.\n\nThe file may be damaged, or Stash Lens cannot reach it. '
+            'Check that the file still exists on the computer.\n\n$e');
       }
       return;
     }
@@ -280,8 +281,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _c = null;
       _fileId = fileId;
     });
-    await old?.dispose();
-    final c = VideoPlayerController.networkUrl(Uri.parse(_api.stream(widget.scene.id, fileId: fileId)), httpHeaders: _api.headers);
+    old?.dispose();
+    final c = LensVideo(_api.stream(widget.scene.id, fileId: fileId), headers: _api.headers);
     try {
       await c.initialize();
       if (!mounted) {
@@ -300,7 +301,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState st) {
+    if (st == AppLifecycleState.paused || st == AppLifecycleState.hidden) {
+      _c?.pause();
+      _flush();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _hide?.cancel();
     _bumpT?.cancel();
     final c = _c;
@@ -347,7 +357,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   SafeArea(child: IconButton(onPressed: () => Navigator.maybePop(context), icon: const Icon(Icons.arrow_back_rounded))),
                 ])
               : Stack(fit: StackFit.expand, children: [
-                  Center(child: AspectRatio(aspectRatio: c.value.aspectRatio == 0 ? 16 / 9 : c.value.aspectRatio, child: VideoPlayer(c))),
+                  Center(child: AspectRatio(aspectRatio: c.value.aspectRatio == 0 ? 16 / 9 : c.value.aspectRatio, child: LensVideoView(c))),
                   Row(children: [
                     Expanded(child: GestureDetector(behavior: HitTestBehavior.translucent, onTap: _toggleUi, onDoubleTap: () => _seekBy(-10))),
                     Expanded(child: GestureDetector(behavior: HitTestBehavior.translucent, onTap: _toggleUi, onDoubleTap: () => _seekBy(10))),
@@ -359,7 +369,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         child: Text(_bump < 0 ? '−10s' : '+10s', style: heading(34)),
                       ),
                     ),
-                  ValueListenableBuilder<VideoPlayerValue>(
+                  ValueListenableBuilder<LensVideoValue>(
                     valueListenable: c,
                     builder: (_, v, __) => v.isBuffering && v.isPlaying ? const IgnorePointer(child: Center(child: Spin())) : const SizedBox.shrink(),
                   ),
@@ -412,7 +422,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
 class _UpNext extends StatelessWidget {
   const _UpNext({required this.controller, required this.next, required this.enabled, required this.onDismiss, required this.onGo});
-  final VideoPlayerController controller;
+  final LensVideo controller;
   final Scene? next;
   final bool enabled;
   final VoidCallback onDismiss;
@@ -484,7 +494,7 @@ class _Controls extends StatelessWidget {
     required this.onInteract,
   });
 
-  final VideoPlayerController controller;
+  final LensVideo controller;
   final String title;
   final double speed;
   final bool hasChapters, hasVersions, autoplay, landscapeLock;
@@ -526,7 +536,7 @@ class _Controls extends StatelessWidget {
             IconButton(onPressed: onRotate, tooltip: 'Rotate', icon: Icon(landscapeLock ? Icons.screen_lock_landscape_rounded : Icons.screen_rotation_rounded)),
           ]),
           const Spacer(),
-          ValueListenableBuilder<VideoPlayerValue>(
+          ValueListenableBuilder<LensVideoValue>(
             valueListenable: controller,
             builder: (_, v, __) => Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               IconButton(iconSize: 40, onPressed: () => onSeekBy(-10), icon: const Icon(Icons.replay_10_rounded)),
@@ -557,7 +567,7 @@ class _Controls extends StatelessWidget {
 
 class _SeekBar extends StatefulWidget {
   const _SeekBar({required this.controller, required this.markers, required this.api, required this.sceneId, required this.cues, required this.spriteW, required this.spriteH, required this.onInteract});
-  final VideoPlayerController controller;
+  final LensVideo controller;
   final List<Marker> markers;
   final LensApi api;
   final int sceneId;
@@ -585,14 +595,14 @@ class _SeekBarState extends State<_SeekBar> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<VideoPlayerValue>(
+    return ValueListenableBuilder<LensVideoValue>(
       valueListenable: widget.controller,
       builder: (_, v, __) {
         final dur = v.duration.inMilliseconds / 1000;
         final pos = v.position.inMilliseconds / 1000;
         final frac = _drag ?? (dur > 0 ? (pos / dur).clamp(0.0, 1.0) : 0.0);
         double buffered = 0;
-        if (v.buffered.isNotEmpty && dur > 0) buffered = (v.buffered.last.end.inMilliseconds / 1000 / dur).clamp(0.0, 1.0);
+        if (dur > 0) buffered = (v.bufferedTo.inMilliseconds / 1000 / dur).clamp(0.0, 1.0);
         final shownT = frac * dur;
 
         return Column(mainAxisSize: MainAxisSize.min, children: [

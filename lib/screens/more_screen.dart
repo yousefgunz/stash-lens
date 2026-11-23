@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../lock.dart';
 import '../models.dart';
 import '../nav.dart';
 import '../state.dart';
@@ -78,6 +79,46 @@ class MoreScreen extends StatelessWidget {
             title: const Text('Autoplay next', style: TextStyle(fontWeight: FontWeight.w700)),
             subtitle: const Text('Continue with a related scene when one ends', style: TextStyle(color: Pal.mute, fontSize: 12.5)),
           ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(color: Pal.bg2, borderRadius: BorderRadius.circular(16), border: Border.all(color: Pal.line)),
+          child: Column(children: [
+            SwitchListTile(
+              value: app.lockEnabled,
+              onChanged: (v) async {
+                final st = context.read<AppState>();
+                final messenger = ScaffoldMessenger.of(context);
+                if (!v) {
+                  if (await authenticate('Turn off the app lock')) st.setLock(false);
+                  return;
+                }
+                if (!await lockSupported()) {
+                  messenger.showSnackBar(const SnackBar(content: Text('Set a fingerprint, face or screen lock in your phone settings first.')));
+                  return;
+                }
+                if (await authenticate('Turn on the app lock')) st.setLock(true);
+              },
+              activeColor: Pal.a,
+              title: const Text('App lock', style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: const Text('Fingerprint, Face ID or your phone PIN to open the app', style: TextStyle(color: Pal.mute, fontSize: 12.5)),
+            ),
+            if (app.lockEnabled)
+              ListTile(
+                title: const Text('Lock after leaving the app', style: TextStyle(fontWeight: FontWeight.w700)),
+                trailing: DropdownButton<int>(
+                  value: const [0, 60, 300].contains(app.lockAfter) ? app.lockAfter : 0,
+                  underline: const SizedBox.shrink(),
+                  dropdownColor: Pal.bg3,
+                  items: const [
+                    DropdownMenuItem(value: 0, child: Text('Immediately')),
+                    DropdownMenuItem(value: 60, child: Text('1 minute')),
+                    DropdownMenuItem(value: 300, child: Text('5 minutes')),
+                  ],
+                  onChanged: (v) => context.read<AppState>().setLockAfter(v ?? 0),
+                ),
+              ),
+          ]),
         ),
         const SizedBox(height: 10),
         Row(children: [

@@ -20,6 +20,8 @@ class AppState extends ChangeNotifier {
   String savedPassword = '';
   bool autoplayNext = true;
   bool feedMuted = true;
+  bool lockEnabled = false;
+  int lockAfter = 0; // seconds in the background before the app locks again
   Map<String, dynamic> status = {};
   Map<String, ProgEntry> _prog = {};
   SharedPreferences? _p;
@@ -30,6 +32,8 @@ class AppState extends ChangeNotifier {
     savedPassword = p.getString('pw') ?? '';
     autoplayNext = p.getBool('autoplay') ?? true;
     feedMuted = p.getBool('feedMuted') ?? true;
+    lockEnabled = p.getBool('lock') ?? false;
+    lockAfter = p.getInt('lockAfter') ?? 0;
     try {
       final raw = jsonDecode(p.getString('prog') ?? '{}') as Map<String, dynamic>;
       _prog = raw.map((k, v) {
@@ -65,6 +69,18 @@ class AppState extends ChangeNotifier {
 
   void disconnect() {
     api = null;
+    notifyListeners();
+  }
+
+  void setLock(bool v) {
+    lockEnabled = v;
+    _p?.setBool('lock', v);
+    notifyListeners();
+  }
+
+  void setLockAfter(int secs) {
+    lockAfter = secs;
+    _p?.setInt('lockAfter', secs);
     notifyListeners();
   }
 

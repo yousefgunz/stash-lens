@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 
+import 'lock.dart';
 import 'screens/setup_screen.dart';
 import 'screens/shell.dart';
 import 'state.dart';
@@ -10,6 +12,7 @@ import 'widgets.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -29,6 +32,7 @@ class LensApp extends StatelessWidget {
       title: 'Stash Lens',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
+      builder: (context, child) => LockGate(child: child ?? const SizedBox.shrink()),
       home: Consumer<AppState>(
         builder: (_, s, __) {
           if (!s.loaded) return const Scaffold(body: Center(child: BrandMark(size: 56)));

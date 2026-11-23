@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player/video_player.dart';
 
 import '../models.dart';
 import '../nav.dart';
 import '../state.dart';
 import '../theme.dart';
+import '../video.dart';
 import '../widgets.dart';
 
 class _FeedMode {
@@ -38,7 +38,7 @@ class _FeedScreenState extends State<FeedScreen> with WidgetsBindingObserver {
   final _pc = PageController();
   final _items = <Scene>[];
   final _seen = <int>{};
-  final _ctrls = <int, VideoPlayerController>{};
+  final _ctrls = <int, LensVideo>{};
   final _failed = <int>{};
   int _mode = 0;
   int _cur = 0;
@@ -169,16 +169,12 @@ class _FeedScreenState extends State<FeedScreen> with WidgetsBindingObserver {
   Future<void> _start(int i) async {
     final api = apiOf(context);
     final s = _items[i];
-    final c = VideoPlayerController.networkUrl(
-      Uri.parse(api.stream(s.id)),
-      httpHeaders: api.headers,
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
-    );
+    final c = LensVideo(api.stream(s.id), headers: api.headers, bufferMb: 12);
     _ctrls[i] = c;
     try {
       await c.initialize();
       if (!mounted || _ctrls[i] != c) {
-        if (_ctrls[i] != c) await c.dispose();
+        if (_ctrls[i] != c) c.dispose();
         return;
       }
       await c.setLooping(true);
@@ -193,7 +189,7 @@ class _FeedScreenState extends State<FeedScreen> with WidgetsBindingObserver {
       if (mounted) setState(() {});
     } catch (_) {
       if (_ctrls[i] == c) _ctrls.remove(i);
-      await c.dispose();
+      c.dispose();
       _failed.add(i);
       if (mounted) setState(() {});
     }
@@ -339,7 +335,7 @@ class _FeedPage extends StatefulWidget {
     required this.onPerformer,
   });
   final Scene scene;
-  final VideoPlayerController? ctrl;
+  final LensVideo? ctrl;
   final bool failed;
   final bool isCurrent;
   final bool paused;
@@ -356,7 +352,7 @@ class _FeedPageState extends State<_FeedPage> {
   bool _fill = false;
   bool _dragging = false;
   double _dragV = 0;
-  VideoPlayerController? _listening;
+  LensVideo? _listening;
 
   @override
   void initState() {
@@ -409,7 +405,7 @@ class _FeedPageState extends State<_FeedPage> {
             child: FittedBox(
               fit: _fill ? BoxFit.cover : BoxFit.contain,
               clipBehavior: Clip.hardEdge,
-              child: SizedBox(width: c.value.size.width, height: c.value.size.height, child: VideoPlayer(c)),
+              child: SizedBox(width: c.value.size.width, height: c.value.size.height, child: LensVideoView(c)),
             ),
           )
         else
@@ -501,7 +497,7 @@ class _FeedPageState extends State<_FeedPage> {
     );
   }
 
-  Widget _bar(VideoPlayerController c) {
+  Widget _bar(LensVideo c) {
     final total = c.value.duration.inMilliseconds;
     final pos = _dragging ? _dragV : c.value.position.inMilliseconds.toDouble();
     final f = total == 0 ? 0.0 : (pos / total).clamp(0.0, 1.0);

@@ -18,7 +18,8 @@ Stash directly, so it shows exactly what the web app shows: same data, same hero
 | **Browse** (More → Studios & tags) | Studios (search, sort, favourites) and Tags (heat-coloured, search, sort) |
 | **Search** | One box over scenes, performers, studios and tags |
 | **Scene page** | Hero frame, Play / Resume / Start over, file versions, cast with face-aware portraits, details, chapters (markers), tags, More like this, play and favourite history, file info (codec, bitrate, hashes, path), links |
-| **Player** | Native `video_player`, double-tap ±10 s, scrub bar with chapter ticks and thumbnail preview, speed, chapters list, version switch, rotate lock, Up next + autoplay, resume, progress sent back to Stash Lens |
+| **Player** | libmpv engine (plays MKV, AVI, WMV, FLV, TS, HEVC, AV1, VP9, DivX …, hardware decoding with software fallback), double-tap ±10 s, scrub bar with chapter ticks and thumbnail preview, speed, chapters list, version switch, rotate lock, Up next + autoplay, resume, progress sent back to Stash Lens |
+| **App lock** | Optional fingerprint / Face ID / phone PIN lock (More → App lock), locks on start and after leaving the app (immediately, 1 or 5 minutes), hides the screen in the app switcher |
 | **Library** | Statistics dashboard (resolutions, ratings, years, months, codecs, genders, top lists) |
 | **Library health** | Every health check with counts, tap to open the affected scenes, duplicate finder, missing-files check |
 
@@ -70,8 +71,10 @@ A free Apple ID signature lasts **7 days**. Run Sideloadly again with the same `
 
 ## Notes
 
-- Playback streams the original file from `/api/stream/<id>`. A phone can only play what its hardware
-  decodes: HEVC is fine on nearly everything, AV1 needs a recent phone. If a file won't play, the player
-  says so, and the scene page's version picker can switch to another file when a scene has several.
+- Playback streams the original file from `/api/stream/<id>`. The player uses libmpv, so it handles
+  nearly every format and falls back to software decoding when the phone's hardware can't. Very heavy files
+  (8K, high-bitrate AV1 on an older phone) may stutter in software. If a file won't open, the player says
+  so, and the scene page's version picker can switch to another file when a scene has several.
+- Release APK size grows by ~20 MB per architecture because of the player engine; `flutter build apk --release --split-per-abi` makes smaller per-phone files.
 - Images and video send the access password as an HTTP Basic header, exactly like the browser does.
 - Watch progress for "Continue watching" is also stored on the phone, so it works even with sync off.
